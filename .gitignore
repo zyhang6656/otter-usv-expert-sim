@@ -1,6 +1,49 @@
+# Python bytecode
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+
+# Virtual environments
 .venv/
+venv/
+env/
+ENV/
+
+# Local environment files
 .env
+.env.*
+!.env.example
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+MANIFEST
+
+# Test, coverage, and type-check caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+
+# IDE and OS noise
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Generated project outputs
 data/
 runs/
