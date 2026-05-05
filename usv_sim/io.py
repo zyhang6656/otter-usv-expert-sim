@@ -31,6 +31,7 @@ def save_dataset_npz(samples: list[TrajectorySample], path: str | Path, extra_me
         **extra_metadata,
         "samples": [s.metadata for s in samples],
         "scenarios": [s.scenario.to_json() for s in samples],
+        "paths": [np.asarray(s.path, dtype=float).tolist() for s in samples],
     }
     np.savez_compressed(
         path,

@@ -16,8 +16,8 @@ def make_demo_scenario() -> Scenario:
 def make_demo_scenario_with_seed(
     seed: int,
     config: SimConfig | None = None,
-    min_distance: float = 45.0,
-    max_distance: float = 65.0,
+    min_distance: float = 80.0,
+    max_distance: float = 100.0,
     static_count: int = 6,
     dynamic_count: int = 3,
 ) -> Scenario:
@@ -69,8 +69,7 @@ def obstacle_clearance(point: np.ndarray, obstacles: Iterable[Obstacle], t: floa
     for obs in obstacles:
         if not obs.active:
             continue
-        dist = np.linalg.norm(point - obs.position_at(t))
-        clearances.append(float(dist - obs.radius - safety_margin))
+        clearances.append(obs.clearance(point, t, safety_margin))
     if not clearances:
         return float("inf")
     return min(clearances)
@@ -128,6 +127,30 @@ def _sample_goal_with_distance(
     raise RuntimeError("failed to sample a goal at the requested distance")
 
 
+def _sample_start_goal_with_distance(
+    rng: np.random.Generator,
+    min_dist: float,
+    max_dist: float,
+    workspace_size: float,
+    margin: float = 8.0,
+    max_tries: int = 2000,
+) -> tuple[np.ndarray, np.ndarray]:
+    for _ in range(max_tries):
+        distance = float(rng.uniform(min_dist, max_dist))
+        angle = float(rng.uniform(-math.pi, math.pi))
+        offset = distance * np.array([math.cos(angle), math.sin(angle)])
+
+        lower = np.maximum(margin, margin - offset)
+        upper = np.minimum(workspace_size - margin, workspace_size - margin - offset)
+        if np.any(lower > upper):
+            continue
+
+        start = rng.uniform(lower, upper)
+        goal = start + offset
+        return start, goal
+    raise RuntimeError("failed to sample a start-goal pair at the requested distance")
+
+
 def _sample_near_segment(
     rng: np.random.Generator,
     start: np.ndarray,
@@ -166,9 +189,9 @@ def sample_scenario(
 ) -> Scenario:
     config = config or SimConfig()
     specs = {
-        "easy": ((2, 4), (1, 2), (2.0, 4.0), (0.2, 0.6), 30.0, 45.0, 1),
-        "medium": ((5, 7), (2, 3), (2.0, 5.5), (0.2, 0.9), 45.0, 65.0, 2),
-        "hard": ((8, 10), (3, 5), (2.5, 6.5), (0.2, 1.2), 60.0, 80.0, 2),
+        "easy": ((2, 4), (1, 2), (2.0, 4.0), (0.2, 0.6), 80.0, 95.0, 1),
+        "medium": ((5, 7), (2, 3), (2.0, 5.5), (0.2, 0.9), 80.0, 100.0, 2),
+        "hard": ((8, 10), (3, 5), (2.5, 6.5), (0.2, 1.2), 80.0, 105.0, 2),
     }
     if difficulty not in specs:
         raise ValueError(f"unknown difficulty: {difficulty}")
@@ -177,11 +200,12 @@ def sample_scenario(
         min_dist = float(min_distance)
     if max_distance is not None:
         max_dist = float(max_distance)
+    if max_dist < min_dist:
+        raise ValueError(f"max_distance must be >= min_distance, got {max_dist} < {min_dist}")
 
     for _ in range(300):
         static_obstacles: list[Obstacle] = []
-        start_xy = rng.uniform(10.0, config.workspace_size - 10.0, size=2)
-        goal = _sample_goal_with_distance(rng, start_xy, min_dist, max_dist, config.workspace_size)
+        start_xy, goal = _sample_start_goal_with_distance(rng, min_dist, max_dist, config.workspace_size)
 
         ns = int(static_count if static_count is not None else rng.integers(ns_range[0], ns_range[1] + 1))
         for _j in range(ns):
@@ -206,15 +230,16 @@ def sample_scenario(
                     lateral_min=radius + 2.5,
                     lateral_max=12.0,
                 )
-            if np.linalg.norm(center - start_xy) < radius + 7.0 or np.linalg.norm(center - goal) < radius + 7.0:
+            endpoint_clearance = radius + config.obstacle_clearance_margin + config.goal_radius
+            if np.linalg.norm(center - start_xy) < endpoint_clearance or np.linalg.norm(center - goal) < endpoint_clearance:
                 center = _sample_point_clear(rng, static_obstacles, radius + 2.0, config.workspace_size)
             if any(np.linalg.norm(center - obs.center) <= radius + obs.radius + 2.0 for obs in static_obstacles):
                 center = _sample_point_clear(rng, static_obstacles, radius + 2.0, config.workspace_size)
             static_obstacles.append(Obstacle(center, radius, kind="static"))
 
-        if obstacle_clearance(start_xy, static_obstacles, 0.0, 5.0) < 0.0:
+        if obstacle_clearance(start_xy, static_obstacles, 0.0, config.obstacle_clearance_margin) < 0.0:
             continue
-        if obstacle_clearance(goal, static_obstacles, 0.0, 5.0) < 0.0:
+        if obstacle_clearance(goal, static_obstacles, 0.0, config.obstacle_clearance_margin) < 0.0:
             continue
         if _line_static_conflicts(start_xy, goal, static_obstacles, 2.0) < min_conflicts:
             continue

@@ -157,8 +157,7 @@ class SamplingNMPCController:
         for obs in obstacles:
             if not obs.active:
                 continue
-            center = obs.position_at(t)
-            c = np.linalg.norm(positions - center[None, :], axis=1) - obs.radius - self.sim_config.safety_margin
+            c = obs.clearance_many(positions, t, self.sim_config.obstacle_clearance_margin)
             clearance = np.minimum(clearance, c)
         return clearance
 

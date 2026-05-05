@@ -34,6 +34,7 @@ def main() -> None:
         try:
             scenario = sample_scenario(rng, difficulty, config)
             sample = simulate_scenario(scenario, config, seed=args.seed + attempt)
+            sample.metadata["difficulty"] = difficulty
         except Exception:
             failures["sample"] += 1
             continue

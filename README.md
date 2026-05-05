@@ -34,3 +34,13 @@ The saved dataset includes:
 - `states`: `(N, 121, 7)` as `[x, y, sin(psi), cos(psi), u, v, r]`
 - `controls`: `(N, 120, 2)` as left/right propeller shaft speeds
 - `env`: `(N, 57)` static/dynamic obstacle and goal encoding
+
+## Visual Dashboard
+
+```powershell
+python -m usv_sim.dashboard
+```
+
+Open `http://127.0.0.1:8765` to browse all expert trajectories, filter by obstacle difficulty,
+replay one selected USV trajectory, and generate new trajectories by difficulty and count.
+New dashboard-generated samples are saved to `data/dashboard_generated.npz`.

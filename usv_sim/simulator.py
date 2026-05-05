@@ -18,6 +18,8 @@ def simulate_scenario(
     sim_config: SimConfig | None = None,
     controller_config: ControllerConfig | None = None,
     seed: int = 0,
+    record_trace: bool = True,
+    stop_on_reach: bool = False,
 ) -> TrajectorySample:
     sim_config = sim_config or SimConfig(rng_seed=seed)
     rng = np.random.default_rng(seed)
@@ -49,7 +51,12 @@ def simulate_scenario(
         states6[k + 1] = ship.rk4_step(state, control, sim_config.dt)
         prev_control = control
 
-        clearance = obstacle_clearance(states6[k + 1, :2], obstacles, t + sim_config.dt, sim_config.safety_margin)
+        clearance = obstacle_clearance(
+            states6[k + 1, :2],
+            obstacles,
+            t + sim_config.dt,
+            sim_config.obstacle_clearance_margin,
+        )
         min_clearance = min(min_clearance, clearance)
         if clearance < 0.0:
             collided = True
@@ -58,18 +65,24 @@ def simulate_scenario(
         dist_goal = float(np.linalg.norm(states6[k + 1, :2] - scenario.goal))
         if dist_goal <= sim_config.goal_radius:
             reached = True
+            if stop_on_reach:
+                if k + 2 < sim_config.n_steps:
+                    states6[k + 2 :] = states6[k + 1]
+                    controls[k + 1 :] = 0.0
+                break
 
-        trace.append(
-            {
-                "step": k,
-                "time": t,
-                "subtarget_idx": int(subtarget_idx),
-                "subtarget": subtarget.tolist(),
-                "clearance": float(clearance),
-                "dist_goal": dist_goal,
-                "control_cost": float(info["cost"]),
-            }
-        )
+        if record_trace:
+            trace.append(
+                {
+                    "step": k,
+                    "time": t,
+                    "subtarget_idx": int(subtarget_idx),
+                    "subtarget": subtarget.tolist(),
+                    "clearance": float(clearance),
+                    "dist_goal": dist_goal,
+                    "control_cost": float(info["cost"]),
+                }
+            )
 
     final_distance = float(np.linalg.norm(states6[-1, :2] - scenario.goal))
     reached = reached or final_distance <= sim_config.goal_radius
@@ -82,6 +95,8 @@ def simulate_scenario(
         "collided": bool(collided),
         "final_distance": final_distance,
         "min_clearance": float(min_clearance),
+        "vessel_collision_radius": float(sim_config.vessel_collision_radius),
+        "obstacle_clearance_margin": float(sim_config.obstacle_clearance_margin),
         "control_saturation_ratio": float(controls_saturated_ratio),
         "initial_distance": float(np.linalg.norm(scenario.goal - scenario.start[:2])),
         "static_obstacle_count": int(len(scenario.static_obstacles)),
@@ -90,8 +105,9 @@ def simulate_scenario(
         "dt": sim_config.dt,
         "n_steps": sim_config.n_steps,
         "runtime_sec": float(time.perf_counter() - t0),
-        "trace": trace,
     }
+    if record_trace:
+        metadata["trace"] = trace
     return TrajectorySample(
         states=state6_to_state7(states6),
         controls=controls,

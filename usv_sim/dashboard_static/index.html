@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>USV Expert Trajectory Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <header class="brand">
+          <div>
+            <p class="eyebrow">Otter USV</p>
+            <h1>专家轨迹可视化</h1>
+          </div>
+          <button id="refreshButton" class="icon-button" title="刷新数据" aria-label="刷新数据">↻</button>
+        </header>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>筛选</h2>
+            <span id="totalCount">0 条</span>
+          </div>
+          <div class="segmented" id="difficultyFilter" role="group" aria-label="障碍物困难程度筛选">
+            <button class="active" data-difficulty="all">全部</button>
+            <button data-difficulty="easy">简单</button>
+            <button data-difficulty="medium">中等</button>
+            <button data-difficulty="hard">困难</button>
+          </div>
+          <div class="counts" id="difficultyCounts">
+            <span>简单 0</span>
+            <span>中等 0</span>
+            <span>困难 0</span>
+          </div>
+          <label class="toggle-row">
+            <input id="showAllTrajectories" type="checkbox">
+            <span>在画布中叠加全部轨迹</span>
+          </label>
+        </section>
+
+        <section class="panel grow-panel">
+          <div class="panel-title">
+            <h2>轨迹</h2>
+            <span id="filteredCount">0 条</span>
+          </div>
+          <div id="sampleList" class="sample-list" aria-live="polite"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>随机生成</h2>
+            <span id="generationState">空闲</span>
+          </div>
+          <form id="generateForm" class="generate-form">
+            <label>
+              <span>障碍物困难程度</span>
+              <select id="generateDifficulty">
+                <option value="easy">简单</option>
+                <option value="medium" selected>中等</option>
+                <option value="hard">困难</option>
+              </select>
+            </label>
+            <label>
+              <span>轨迹数量</span>
+              <input id="generateCount" type="number" min="1" max="50" value="3">
+            </label>
+            <label>
+              <span>随机种子</span>
+              <input id="generateSeed" type="number" placeholder="自动">
+            </label>
+            <button id="generateButton" type="submit" class="primary-button">生成轨迹</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title">
+            <h2>一键批量生成</h2>
+            <span id="balancedGenerationState">空闲</span>
+          </div>
+          <form id="balancedGenerateForm" class="generate-form">
+            <label>
+              <span>合格轨迹总数</span>
+              <input id="balancedGenerateCount" type="number" min="3" max="30000" step="3" value="9000">
+            </label>
+            <label>
+              <span>随机种子</span>
+              <input id="balancedGenerateSeed" type="number" placeholder="自动">
+            </label>
+            <button id="balancedGenerateButton" type="submit" class="primary-button">生成 1:1:1 数据集</button>
+            <div class="batch-progress" aria-live="polite">
+              <div class="progress-track">
+                <div id="balancedProgressFill" class="progress-fill"></div>
+              </div>
+              <div id="balancedProgressText" class="progress-text">简单 0 / 中等 0 / 困难 0</div>
+            </div>
+          </form>
+        </section>
+      </aside>
+
+      <main class="main-view">
+        <section class="stage-toolbar">
+          <div class="selected-heading">
+            <p id="selectedDifficulty" class="eyebrow">未选择</p>
+            <h2 id="selectedTitle">等待轨迹数据</h2>
+          </div>
+          <div class="metrics" id="metrics"></div>
+        </section>
+
+        <section class="canvas-wrap">
+          <canvas id="trajectoryCanvas"></canvas>
+          <div id="emptyState" class="empty-state hidden">没有满足 80m 起终点距离的匹配轨迹，请生成新轨迹</div>
+        </section>
+
+        <section class="playback-bar">
+          <button id="playButton" class="icon-button wide" title="播放或暂停" aria-label="播放或暂停">▶</button>
+          <button id="resetButton" class="icon-button" title="重置回放" aria-label="重置回放">↺</button>
+          <input id="timeSlider" type="range" min="0" max="120" value="0">
+          <div class="time-readout">
+            <span id="timeText">0.0 s</span>
+            <span id="stepText">0 / 0</span>
+          </div>
+          <label class="speed-control">
+            <span>速度</span>
+            <select id="speedSelect">
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="2">2x</option>
+              <option value="4">4x</option>
+              <option value="8">8x</option>
+            </select>
+          </label>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

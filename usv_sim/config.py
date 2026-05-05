@@ -7,16 +7,21 @@ from dataclasses import dataclass
 class SimConfig:
     workspace_size: float = 100.0
     dt: float = 0.5
-    n_steps: int = 121
+    n_steps: int = 181
     safety_margin: float = 1.0
-    obstacle_influence: float = 10.0
+    vessel_collision_radius: float = 3.3
+    obstacle_influence: float = 12.0
     max_static_obstacles: int = 10
     max_dynamic_obstacles: int = 5
     grid_resolution: float = 2.0
-    grid_clearance: float = 2.0
+    grid_clearance: float = 4.5
     subtarget_radius: float = 3.0
     goal_radius: float = 5.0
     rng_seed: int = 0
+
+    @property
+    def obstacle_clearance_margin(self) -> float:
+        return self.vessel_collision_radius + self.safety_margin
 
 
 @dataclass(frozen=True)
